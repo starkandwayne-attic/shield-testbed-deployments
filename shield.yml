@@ -1,0 +1,76 @@
+---
+# Shield deployment
+
+director_uuid: YOUR-DIRECTOR-UUID-HERE
+name: shield
+
+releases:
+- { name: shield, version: latest }
+
+disk_pools: []
+resource_pools:
+  - name: default
+    network: default
+    stemcell:
+      name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+      version: latest
+
+networks:
+  - name: default
+    type: manual
+    subnets:
+    - range: 10.244.2.0/24
+      gateway: 10.244.2.1
+      dns: [ 8.8.8.8, 8.8.4.4 ]
+      static:
+        - 10.244.2.11 - 10.244.2.99
+
+jobs:
+  - name: shield
+    instances: 1
+    resource_pool: default
+    persistent_disk: 2048
+    templates:
+      - { release: shield, name: postgres }
+      - { release: shield, name: shield-daemon }
+    networks:
+      - name: default
+        static_ips:
+          - 10.244.2.11
+
+properties:
+  # postgres stuff
+  databases:
+    address: 10.244.2.11
+    port: 5524
+    db_scheme: postgres
+    databases:
+      - name: shielddb
+        tag: shield
+        citext: true
+    roles:
+      - name: shieldadmin
+        password: admin
+        tag: admin
+
+  # shield-specific stuff
+  shield:
+    daemon:
+      database:
+        host: 10.244.2.11
+        port: 5524
+        db: shielddb
+        username: shieldadmin
+        password: admin
+
+compilation:
+  network: default
+  reuse_compilation_vms: true
+  workers: 3
+
+update:
+  serial: false
+  canaries: 1
+  max_in_flight: 50
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000

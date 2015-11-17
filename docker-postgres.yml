@@ -2,12 +2,13 @@
 # Dockerized PostgreSQL deployment
 # (for use in testing SHIELD)
 
-director_uuid: 3606f4d1-c2f8-48bc-913d-b5a4012e81ec
+director_uuid: YOUR-DIRECTOR-UUID-HERE
 name: shield-postgres
 
 releases:
 - { name: docker, version: 15 }
 - { name: postgresql-docker, version: 1.1 }
+- { name: shield, version: latest }
 
 disk_pools: []
 resource_pools:
@@ -36,6 +37,7 @@ jobs:
       - { release: docker,            name: docker }
       - { release: docker,            name: cf-containers-broker }
       - { release: postgresql-docker, name: frodenas_postgresql_image }
+      - { release: shield,            name: shield-agent }
     networks:
       - name: default
         static_ips:
@@ -140,8 +142,8 @@ compilation:
   workers: 3
 
 update:
-  serial: true
-  canary_watch_time: 30000-180000
-  update_watch_time: 30000-180000
+  serial: false
   canaries: 1
-  max_in_flight: 1
+  max_in_flight: 50
+  canary_watch_time: 1000-30000
+  update_watch_time: 1000-30000
