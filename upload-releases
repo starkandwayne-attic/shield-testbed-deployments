@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for URL in "https://bosh.io/d/github.com/cf-platform-eng/docker-boshrelease?v=15" \
+           "https://bosh.io/d/github.com/cloudfoundry-community/postgresql-docker-boshrelease?v=1.1"
+do
+	echo "+ bosh upload release \"${URL}\""
+	bosh upload release "${URL}"
+	echo ; echo ; echo ; echo
+done
