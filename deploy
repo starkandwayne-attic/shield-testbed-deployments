@@ -7,6 +7,7 @@ if [[ -z ${MANIFEST} ]]; then
 fi
 
 UUID=$(bosh status --uuid)
-cat $MANIFEST | sed -e "s/^director_uuid:.*/director_uuid: ${UUID}/" > current.yml
-sha1sum current.yml
-bosh -d current.yml -n deploy
+mkdir -p local
+cat $MANIFEST | sed -e "s/^director_uuid:.*/director_uuid: ${UUID}/" > local/$MANIFEST
+sha1sum local/$MANIFEST
+bosh -d local/$MANIFEST -n deploy
