@@ -6,9 +6,7 @@ if [[ -z ${MANIFEST} ]]; then
 	exit 1
 fi
 
-trap 'rm -f .current.yml' INT TERM QUIT EXIT
-
 UUID=$(bosh status --uuid)
-cat $MANIFEST | sed -e "s/^director_uuid:.*/director_uuid: ${UUID}/" > .current.yml
-sha1sum .current.yml
-bosh -d .current.yml -n deploy
+cat $MANIFEST | sed -e "s/^director_uuid:.*/director_uuid: ${UUID}/" > current.yml
+sha1sum current.yml
+bosh -d current.yml -n deploy

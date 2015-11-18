@@ -33,6 +33,7 @@ jobs:
     templates:
       - { release: shield, name: postgres }
       - { release: shield, name: shield-daemon }
+      - { release: shield, name: shield-agent }
     networks:
       - name: default
         static_ips:

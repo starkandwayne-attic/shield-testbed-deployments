@@ -62,6 +62,9 @@ jobs:
       - name: default
 
 properties:
+  shield:
+    autoprovision: http://shield.10.244.2.11.xip.io:8080
+
   docker:
     ipv6: null
 
