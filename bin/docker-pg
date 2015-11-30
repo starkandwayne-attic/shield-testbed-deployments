@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# bin/docker-pg - Provision and populate dockerized postgres database
+
+# need: 1) cf-containers-broker endpoint
+#       2) username / password credentials
+#       4) plan ID
+#
+
+ENDPOINT=http://10.244.3.11
+CREDENTIALS=containers:password
+TEMPFILE=$(mktemp dockerpg.XXXXXXXX)
+trap "rm -f ${TEMPFILE}" INT TERM EXIT
+
+curl -Ls -X GET -u ${CREDENTIALS} ${ENDPOINT}/v2/catalog > ${TEMPFILE}
+cat ${TEMPFILE} | jq .
+echo ; echo ; echo
+
+SERVICE_ID=$(cat ${TEMPFILE} | jq -r '.services[0].id')
+if [[ -z ${SERVICE_ID} ]]; then
+	echo 'FAILED'
+	exit 1
+fi
+PLAN_ID=$(cat ${TEMPFILE} | jq -r '.services[0].plans[0].id')
+if [[ -z ${PLAN_ID} ]]; then
+	echo 'FAILED'
+	exit 1
+fi
+
+INSTANCE_UUID=d9236eca-6018-4641-a63d-1c766db541e0
+curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/$INSTANCE_UUID \
+     -H 'Content-type: application/json' \
+     -H "X-Broker-API-Version: 2.7" \
+     --data-binary '
+{
+  "organization_guid" : "org-guid-here",
+  "plan_id"           : "'${PLAN_ID}'",
+  "service_id"        : "'${SERVICE_ID}'",
+  "space_guid"        : "space-guid-here",
+  "parameters"        : {}
+}' | tee ${TEMPFILE} | jq .
+echo ; echo ; echo
+
+APP_GUID=72ae34b1-2b27-4589-8b0b-fed42e837505
+BINDING_UUID=0ab43c5f-38b3-4f0b-8ab6-858e8c814b62
+curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/${INSTANCE_UUID}/service_bindings/${BINDING_UUID} \
+     -H 'Content-type: application/json' \
+     -H "X-Broker-API-Version: 2.7" \
+     --data-binary '
+{
+  "plan_id"           : "'${PLAN_ID}'",
+  "service_id"        : "'${SERVICE_ID}'",
+  "app_guid"          : "'${APP_GUID}'"
+}' | tee ${TEMPFILE} | jq .
+echo ; echo ; echo
+
+PG_URI=$(cat ${TEMPFILE} | jq -r '.credentials.uri')
+cat <<EOF >${TEMPFILE}
+DROP TABLE IF EXISTS datastuffs;
+CREATE TABLE datastuffs (
+	str TEXT
+);
+DELETE FROM datastuffs;
+EOF
+for str in $(pwgen 64 22); do
+	cat <<EOF >>${TEMPFILE}
+INSERT INTO datastuffs (str) VALUES ('${str}');
+EOF
+done
+cat ${TEMPFILE} | psql ${PG_URI} >/dev/null
+
+cat <<EOF | psql ${PG_URI}
+SELECT * FROM datastuffs;
+EOF
