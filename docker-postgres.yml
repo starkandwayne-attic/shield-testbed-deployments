@@ -64,6 +64,7 @@ jobs:
 properties:
   shield:
     autoprovision: http://shield.10.244.2.11.xip.io:8080
+  log_level: debug
 
   docker:
     ipv6: null

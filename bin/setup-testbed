@@ -1,0 +1,63 @@
+#!/bin/bash
+
+fail() {
+	echo >&2 $*
+}
+
+info() {
+	echo >&1 $*
+}
+
+info "This will set up Cloud Foundry, Redis, and SHIELD on BOSH lite."
+info "Please ensure you have approximately 30 GB of free space for this configuration."
+
+info "Setting up BOSH lite directory..."
+mkdir ~/workspace
+cd ~/workspace
+git clone https://github.com/cloudfoundry/bosh-lite
+cd bosh-lite
+
+info "Starting vagrant VM, using Virtualbox"
+vagrant up --provider=virtualbox
+sleep 1m
+
+info "Targeting BOSH lite director and adding route. You will be prompted for your admin password to add the route."
+bosh target 192.168.50.4 lite
+./bin/add-route
+sleep 10s
+
+exit 0
+
+info "Now for some Cloud Foundry"
+info "Cloning and updating Cloud Foundry blobs - this may take about 10 minutes, depending on your connection."
+git clone https://github.com/cloudfoundry/cf-release.git
+cd cf-release
+# At this step saw the following:
+#   $ cd cf-release/
+#   ruby-2.1.7 is not installed.
+#   To install do: 'rvm install ruby-2.1.7'
+# Should have something to check that `rvm` or similar is installed and that the appropriate version of Ruby is installed.
+set -e
+./scripts/update
+
+# Also need to make sure bundler is installed correctly
+gem install bundler ; bundle install
+
+# For El Capitan
+#     > Bundler on El Capitan also is missing OpenSSL, if you have homebrew installed you can do this:
+brew link openssl --force
+
+# Make sure spiff is installed, as this still uses spiff... not sure how to do that.
+
+info "Setting up Cloud Foundry on BOSH lite."
+info "Exact time will vary depending on your connection, of course, but please allow for at least 15 minutes."
+# START - 18:34
+# cd ../bosh-lite
+# bosh login admin admin?
+# ^^ nope...
+# ./bin/provision_cf
+# Skip the above, too error prone. Just run 'em one at a time:
+./scripts/generate-bosh-lite-dev-manifest
+bosh create release
+bosh upload release
+bosh -n deploy
