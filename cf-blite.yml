@@ -2457,7 +2457,7 @@ networks:
 properties:
   shield:
     autoprovision: http://shield.10.244.2.11.xip.io:8080
-  log_level: debug
+    log_level: debug
   acceptance_tests:
     admin_password: admin
     admin_user: admin
