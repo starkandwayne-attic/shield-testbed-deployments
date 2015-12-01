@@ -38,6 +38,7 @@ jobs:
       - { release: docker,            name: cf-containers-broker }
       - { release: postgresql-docker, name: frodenas_postgresql_image }
       - { release: shield,            name: shield-agent }
+      - { release: shield,            name: agent-pgtools }
     networks:
       - name: default
         static_ips:
