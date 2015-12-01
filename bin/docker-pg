@@ -1,74 +1,125 @@
 #!/bin/bash
 
-# bin/docker-pg - Provision and populate dockerized postgres database
+# bin/docker-pg - Provision and populate dockerized postgres databases
 
-# need: 1) cf-containers-broker endpoint
-#       2) username / password credentials
-#       4) plan ID
-#
+setup() {
+	ENDPOINT=http://10.244.3.11
+	CREDENTIALS=containers:password
+	TEMPFILE=$(mktemp dockerpg.XXXXXXXX)
+	trap "rm -f ${TEMPFILE}" INT TERM EXIT
 
-ENDPOINT=http://10.244.3.11
-CREDENTIALS=containers:password
-TEMPFILE=$(mktemp dockerpg.XXXXXXXX)
-trap "rm -f ${TEMPFILE}" INT TERM EXIT
+	curl -Ls -X GET -u ${CREDENTIALS} ${ENDPOINT}/v2/catalog > ${TEMPFILE}
+	cat ${TEMPFILE} | jq .
+	echo ; echo ; echo
 
-curl -Ls -X GET -u ${CREDENTIALS} ${ENDPOINT}/v2/catalog > ${TEMPFILE}
-cat ${TEMPFILE} | jq .
-echo ; echo ; echo
+	SERVICE_ID=$(cat ${TEMPFILE} | jq -r '.services[0].id')
+	if [[ -z ${SERVICE_ID} ]]; then
+		echo 'FAILED'
+		exit 1
+	fi
+	PLAN_ID=$(cat ${TEMPFILE} | jq -r '.services[0].plans[0].id')
+	if [[ -z ${PLAN_ID} ]]; then
+		echo 'FAILED'
+		exit 1
+	fi
+}
 
-SERVICE_ID=$(cat ${TEMPFILE} | jq -r '.services[0].id')
-if [[ -z ${SERVICE_ID} ]]; then
-	echo 'FAILED'
-	exit 1
-fi
-PLAN_ID=$(cat ${TEMPFILE} | jq -r '.services[0].plans[0].id')
-if [[ -z ${PLAN_ID} ]]; then
-	echo 'FAILED'
-	exit 1
-fi
+provision() {
+	instance=$1 ; app=$2 ; binding=$3
 
-INSTANCE_UUID=d9236eca-6018-4641-a63d-1c766db541e0
-curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/$INSTANCE_UUID \
-     -H 'Content-type: application/json' \
-     -H "X-Broker-API-Version: 2.7" \
-     --data-binary '
-{
-  "organization_guid" : "org-guid-here",
-  "plan_id"           : "'${PLAN_ID}'",
-  "service_id"        : "'${SERVICE_ID}'",
-  "space_guid"        : "space-guid-here",
-  "parameters"        : {}
-}' | tee ${TEMPFILE} | jq .
-echo ; echo ; echo
+	curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/$instance \
+		 -H 'Content-type: application/json' \
+		 -H "X-Broker-API-Version: 2.7" \
+		 --data-binary '
+	{
+	  "organization_guid" : "org-guid-here",
+	  "plan_id"           : "'${PLAN_ID}'",
+	  "service_id"        : "'${SERVICE_ID}'",
+	  "space_guid"        : "space-guid-here",
+	  "parameters"        : {}
+	}' | tee ${TEMPFILE} | jq .
+	echo ; echo ; echo
 
-APP_GUID=72ae34b1-2b27-4589-8b0b-fed42e837505
-BINDING_UUID=0ab43c5f-38b3-4f0b-8ab6-858e8c814b62
-curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/${INSTANCE_UUID}/service_bindings/${BINDING_UUID} \
-     -H 'Content-type: application/json' \
-     -H "X-Broker-API-Version: 2.7" \
-     --data-binary '
-{
-  "plan_id"           : "'${PLAN_ID}'",
-  "service_id"        : "'${SERVICE_ID}'",
-  "app_guid"          : "'${APP_GUID}'"
-}' | tee ${TEMPFILE} | jq .
-echo ; echo ; echo
+	curl -Lv -X PUT -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/${instance}/service_bindings/${binding} \
+		 -H 'Content-type: application/json' \
+		 -H "X-Broker-API-Version: 2.7" \
+		 --data-binary '
+	{
+	  "plan_id"           : "'${PLAN_ID}'",
+	  "service_id"        : "'${SERVICE_ID}'",
+	  "app_guid"          : "'${app}'"
+	}' | tee ${TEMPFILE} | jq .
+	echo ; echo ; echo
 
-PG_URI=$(cat ${TEMPFILE} | jq -r '.credentials.uri')
-cat <<EOF >${TEMPFILE}
+	PG_URI=$(cat ${TEMPFILE} | jq -r '.credentials.uri')
+	if [[ -z ${PG_URI} ]]; then
+		echo ">>> FAILED: PG_URI was empty"
+		exit 2
+	fi
+
+	cat <<EOF >${TEMPFILE}
 DROP TABLE IF EXISTS datastuffs;
 CREATE TABLE datastuffs (
 	str TEXT
 );
 DELETE FROM datastuffs;
 EOF
-for str in $(pwgen 64 22); do
-	cat <<EOF >>${TEMPFILE}
+	for str in $(pwgen 64 22); do
+		cat <<EOF >>${TEMPFILE}
 INSERT INTO datastuffs (str) VALUES ('${str}');
 EOF
-done
-cat ${TEMPFILE} | psql ${PG_URI} >/dev/null
+	done
+	cat ${TEMPFILE} | psql ${PG_URI} >/dev/null
 
-cat <<EOF | psql ${PG_URI}
+	while ! psql -q -c "select true;" -d ${PG_URI} >/dev/null 2>&1; do sleep 1; done
+	cat <<EOF | psql ${PG_URI}
 SELECT * FROM datastuffs;
 EOF
+}
+
+deprovision() {
+	instance=$1 ; app=$2 ; binding=$3
+
+	curl -Lv -X DELETE -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/${instance}/service_bindings/${binding}?plan_id=${PLAN_ID}\&service_id=${SERVICE_ID} \
+	    -H "X-Broker-API-Version: 2.7" | tee ${TEMPFILE} | jq .
+echo ; echo ; echo
+
+curl -Lv -X DELETE -u ${CREDENTIALS} ${ENDPOINT}/v2/service_instances/${instance}?plan_id=${PLAN_ID}\&service_id=${SERVICE_ID} \
+     -H "X-Broker-API-Version: 2.7" | tee ${TEMPFILE} | jq .
+echo ; echo ; echo
+}
+
+case ${1} in
+(help|-h|--help)
+	echo "$0 provision"
+	echo "$0 teardown"
+	exit 0
+	;;
+
+(provision)
+	setup
+	provision 'd9236eca-6018-4641-a63d-1c766db541e0' '72ae34b1-2b27-4589-8b0b-fed42e837505' '0ab43c5f-38b3-4f0b-8ab6-858e8c814b62'
+	provision '7db41014-83f1-42e4-b747-361243a6a9d8' 'c1ccd291-d78a-4420-afbb-fcda842df267' '039bb515-4eee-4e94-8264-6cd85b297e89'
+	provision '4038721d-caec-49f3-bb08-03c480f0fbda' 'cda7b658-7ab3-4719-8b2b-93d75b09e01b' '29ebcbf5-28c7-40ef-b2d9-420acd17e253'
+	provision 'cff3e578-6655-4d52-9d88-655924c20274' '50acad5d-26bc-4d9b-aa27-bf481b82cd19' '21903325-ca14-4553-a24e-1bb550b6b091'
+	provision 'ff8fa804-cb9c-4c9b-9e8a-db36d06d2be8' '35f4f5f1-7770-460c-b564-760f9355aa17' 'cbb88ac9-595f-4583-a421-05d6caee0f0d'
+	#provision '' '' ''
+	exit 0
+	;;
+
+(teardown)
+	setup
+	deprovision 'd9236eca-6018-4641-a63d-1c766db541e0' '72ae34b1-2b27-4589-8b0b-fed42e837505' '0ab43c5f-38b3-4f0b-8ab6-858e8c814b62'
+	deprovision '7db41014-83f1-42e4-b747-361243a6a9d8' 'c1ccd291-d78a-4420-afbb-fcda842df267' '039bb515-4eee-4e94-8264-6cd85b297e89'
+	deprovision '4038721d-caec-49f3-bb08-03c480f0fbda' 'cda7b658-7ab3-4719-8b2b-93d75b09e01b' '29ebcbf5-28c7-40ef-b2d9-420acd17e253'
+	deprovision 'cff3e578-6655-4d52-9d88-655924c20274' '50acad5d-26bc-4d9b-aa27-bf481b82cd19' '21903325-ca14-4553-a24e-1bb550b6b091'
+	deprovision 'ff8fa804-cb9c-4c9b-9e8a-db36d06d2be8' '35f4f5f1-7770-460c-b564-760f9355aa17' 'cbb88ac9-595f-4583-a421-05d6caee0f0d'
+	#deprovision '' '' ''
+	exit 0
+	;;
+
+(*)
+	echo "Try $0 help"
+	exit 1
+	;;
+esac
