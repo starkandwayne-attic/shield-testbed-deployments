@@ -242,6 +242,8 @@ jobs:
     release: cf
   - name: metron_agent
     release: cf
+  - name: shield-agent
+    release: shield
   update: {}
 - instances: 1
   name: uaa_z1
