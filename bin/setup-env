@@ -1,0 +1,65 @@
+#!/bin/bash
+
+START_TIME=${SECONDS}
+
+fail() {
+	echo >&2 $*
+}
+
+info() {
+	echo >&1 $*
+}
+
+PWD=$(pwd)
+
+info "Setting up your SHIELD dev/test environment"
+info "Note that you must have: "
+info "   - BOSH Lite running"
+info "   - Latest CF deployed"
+info "   - Go installed and GOPATH set"
+sleep 2s
+
+if [[ -z $(command -v shield) ]]; then
+	if [[ -z $(command -v git) ]] ; then
+		fail "Git must be installed and configured to build shield CLI from Github."
+		exit 1
+	fi
+	info "Cloning shield repo to build shield CLI from source..."
+	mkdir -p $GOPATH/src/github.com/starkandwayne
+	cd $GOPATH/src/github.com/starkandwayne
+	git clone https://github.com/starkandwayne/shield.git
+	cd shield
+	make shield-cli
+	cp shield /usr/local/bin/
+	cp bin/bkp /usr/local/bin/
+	info "Shield CLI is now located at:"
+	info $(which shield)
+	cd ${PWD}
+fi
+
+info "Uploading docker and docker postgres releases"
+info "(This may take a moment)"
+./bin/upload-releases
+
+info "Building the latest shield dev BOSH release..."
+cd $GOPATH/src/github.com/starkandwayne
+git clone https://github.com/starkandwayne/shield-boshrelease.git
+cd shield-boshrelease/src/shield
+git submodule update --init --recursive
+cd ../..
+bosh create release && bosh upload release
+
+info "Deploying CF, docker postgres, and shield"
+info "(If this is your initial deploy it may take some time.)"
+./bin/deploy docker-postgres.yml
+./bin/deploy cf-blite.yml
+# Docker PG always requires a redeploy.
+./bin/deploy docker-postgres.yml
+./bin/deploy shield.yml
+
+info "Initializing shield with some defaults"
+#FIXME: init-shield should use shield CLI rather than bkp script
+./bin/init-shield
+
+ELAPSED_TIME=$((${SECONDS} - ${START_TIME}))
+info "It took ${ELAPSED_TIME} seconds to set up your test environment."
