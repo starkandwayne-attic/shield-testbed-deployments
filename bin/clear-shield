@@ -1,0 +1,15 @@
+#!/bin/bash
+
+export SHIELD_TARGET=http://10.244.2.11:8080
+
+#FIXME: Update to use shield CLI
+for type in target store schedule job; do
+	for uuid in $(bkp -r list ${type}s | jq -r '.[].uuid'); do
+		echo "Deleting ${type} $uuid"
+		bkp delete ${type} $uuid
+	done
+done
+for uuid in $(bkp -r list retention policies | jq -r '.[].uuid'); do
+	echo "Deleting retention policy $uuid"
+	bkp delete retention policy $uuid
+done
