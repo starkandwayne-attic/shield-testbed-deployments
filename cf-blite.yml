@@ -244,6 +244,8 @@ jobs:
     release: cf
   - name: shield-agent
     release: shield
+  - name: agent-pgtools
+    release: shield
   update: {}
 - instances: 1
   name: uaa_z1
@@ -283,8 +285,6 @@ jobs:
     release: cf
   - name: statsd-injector
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 0
   name: uaa_z2
@@ -324,8 +324,6 @@ jobs:
     release: cf
   - name: statsd-injector
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 1
   name: api_z1
@@ -374,8 +372,6 @@ jobs:
     release: cf
   - name: route_registrar
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 0
   name: api_z2
@@ -420,8 +416,6 @@ jobs:
     release: cf
   - name: route_registrar
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 0
   name: clock_global
@@ -462,8 +456,6 @@ jobs:
     release: cf
   - name: nfs_mounter
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 0
   name: api_worker_z2
@@ -489,8 +481,6 @@ jobs:
     release: cf
   - name: nfs_mounter
     release: cf
-  - name: shield-agent
-    release: shield
   update: {}
 - instances: 1
   name: hm9000_z1
@@ -778,7 +768,7 @@ jobs:
   - name: smoke-tests
     release: cf
 meta:
-  environment: cf-shield
+  environment: cf-warden
   releases:
   - name: cf
     version: latest
@@ -3124,7 +3114,7 @@ properties:
 releases:
 - { name: shield, version: latest }
 - name: cf
-  version: 225
+  version: latest
 resource_pools:
 - cloud_properties:
     name: random
