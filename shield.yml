@@ -58,6 +58,7 @@ properties:
   # shield-specific stuff
   shield:
     daemon:
+      name: S.H.I.E.L.D. Training Camp
       database:
         host: 10.244.2.11
         port: 5524
