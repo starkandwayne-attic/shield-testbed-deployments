@@ -2,38 +2,37 @@
 
 export SHIELD_TARGET=http://10.244.2.11:8080
 
-cat <<EOF | bkp create schedule
-name: Daily Backups
-when: daily 3am
-EOF
-SCHEDULE=$(bkp -r list schedules | jq -r .[].uuid)
+SCHEDULE=$(cat <<EOF | shield --raw create schedule | jq -r .uuid
+{"name": "Daily Backups",
+ "when": "daily 3am"}
+EOF)
 
-cat <<EOF | bkp create retention policy
-name:    Default Retention
-expires: 8640000
-EOF
-RETENTION=$(bkp -r list retention policies | jq -r .[].uuid)
+RETENTION=$(cat <<EOF | shield --raw create retention policy | jq -r .uuid
+{"name":    "Default Retention",
+ "expires": 8640000}
+EOF)
 
-cat <<EOF | bkp create store
-name:     Dummy Store
-plugin:   dummy
-endpoint: '{"directory":"/tmp/shield/dummy"}'
-EOF
-STORE=$(bkp -r list stores | jq -r .[].uuid)
+STORE=$(cat <<EOF | shield --raw create store | jq -r .uuid
+{"name":     "Dummy Store",
+ "plugin":   "dummy",
+ "endpoint": "{\"directory\":\"/tmp/shield/dummy\"}"}
+EOF)
 
-cat <<EOF | bkp create target
-name:     Shield DB Backups
-plugin:   postgres
-endpoint: '{"pg_host":"localhost","pg_port":"5224","pg_user":"shieldadmin","pg_password":"admin","pg_database":"shielddb"}'
-agent:    10.244.2.11:5444
-EOF
-TARGET=$(bkp -r list targets | jq -r .[].uuid)
+TARGET=$(cat <<EOF | shield --raw create target | jq -r .uuid
+{"name":     "Shield DB Backups",
+ "plugin":   "postgres",
+ "endpoint": "{\"pg_host\":\"localhost\",\"pg_port\":\"5224\",\"pg_user\":\"shieldadmin\",\"pg_password\":\"admin\",\"pg_database\":\"shielddb\"}",
+ "agent":    "10.244.2.11:5444"}
+EOF)
 
-cat <<EOF | bkp create job
-name:      Shield DB Backups
-target:    ${TARGET}
-store:     ${STORE}
-schedule:  ${SCHEDULE}
-retention: ${RETENTION}
-paused:    false
-EOF
+JOB=$(cat <<EOF | shield --raw create job | jq -r .uuid
+{"name":      "Shield DB Backups",
+ "target":    "${TARGET}",
+ "store":     "${STORE}",
+ "schedule":  "${SCHEDULE}",
+ "retention": "${RETENTION}",
+ "paused":    false}
+EOF)
+
+shield show job "${JOB}"
+# vim:ft=bash

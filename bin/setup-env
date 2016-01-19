@@ -58,7 +58,6 @@ info "(If this is your initial deploy it may take some time.)"
 ./bin/deploy shield.yml
 
 info "Initializing shield with some defaults"
-#FIXME: init-shield should use shield CLI rather than bkp script
 ./bin/init-shield
 
 ELAPSED_TIME=$((${SECONDS} - ${START_TIME}))
