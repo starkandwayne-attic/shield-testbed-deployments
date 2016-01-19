@@ -2,30 +2,44 @@
 
 export SHIELD_TARGET=http://10.244.2.11:8080
 
-SCHEDULE=$(cat <<EOF | shield --raw create schedule | jq -r .uuid
+SCHEDULE=$(shield --raw show schedule Daily Backups | jq -r '.uuid // empty')
+if [[ -z ${SCHEDULE} ]]; then
+	SCHEDULE=$(cat <<EOF | shield --raw create schedule | jq -r .uuid
 {"name": "Daily Backups",
  "when": "daily 3am"}
 EOF)
+fi
 
-RETENTION=$(cat <<EOF | shield --raw create retention policy | jq -r .uuid
+RETENTION=$(shield --raw show retention policy Default Retention | jq -r '.uuid // empty')
+if [[ -z ${RETENTION} ]]; then
+	RETENTION=$(cat <<EOF | shield --raw create retention policy | jq -r .uuid
 {"name":    "Default Retention",
  "expires": 8640000}
 EOF)
+fi
 
-STORE=$(cat <<EOF | shield --raw create store | jq -r .uuid
+STORE=$(shield --raw show store Dummy Store | jq -r '.uuid // empty')
+if [[ -z ${STORE} ]]; then
+	STORE=$(cat <<EOF | shield --raw create store | jq -r .uuid
 {"name":     "Dummy Store",
  "plugin":   "dummy",
  "endpoint": "{\"directory\":\"/tmp/shield/dummy\"}"}
 EOF)
+fi
 
-TARGET=$(cat <<EOF | shield --raw create target | jq -r .uuid
+TARGET=$(shield --raw show target Shield DB Backups | jq -r '.uuid // empty')
+if [[ -z ${TARGET} ]]; then
+	TARGET=$(cat <<EOF | shield --raw create target | jq -r .uuid
 {"name":     "Shield DB Backups",
  "plugin":   "postgres",
  "endpoint": "{\"pg_host\":\"localhost\",\"pg_port\":\"5224\",\"pg_user\":\"shieldadmin\",\"pg_password\":\"admin\",\"pg_database\":\"shielddb\"}",
  "agent":    "10.244.2.11:5444"}
 EOF)
+fi
 
-JOB=$(cat <<EOF | shield --raw create job | jq -r .uuid
+JOB=$(shield --raw show job Shield DB Backups | jq -r '.uuid // empty')
+if [[ -z ${JOB} ]]; then
+	JOB=$(cat <<EOF | shield --raw create job | jq -r .uuid
 {"name":      "Shield DB Backups",
  "target":    "${TARGET}",
  "store":     "${STORE}",
@@ -33,6 +47,14 @@ JOB=$(cat <<EOF | shield --raw create job | jq -r .uuid
  "retention": "${RETENTION}",
  "paused":    false}
 EOF)
+fi
 
-shield show job "${JOB}"
+if [[ -z ${JOB} ]]; then
+	echo >&2 "Failed to create job... (try running with SHIELD_TRACE=1)"
+	exit 1
+fi
+
+shield show job Shield DB Backups
+exit 0
+
 # vim:ft=bash
