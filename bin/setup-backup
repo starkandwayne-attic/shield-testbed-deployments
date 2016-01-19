@@ -2,27 +2,25 @@
 
 export SHIELD_TARGET=http://10.244.2.11:8080
 
-cat <<EOF | shield --raw create schedule
+SCHEDULE=$(cat <<EOF | shield --raw create schedule
 {"name": "Daily Backups", "when": "daily 3:00"}
-EOF
-SCHEDULE=$(shield list schedules --raw | jq -r .[].uuid)
+EOF)
+SCHEDULE=${SCHEDULE:9:36}
 
-cat <<EOF | shield --raw create retention policy
+RETENTION=$(cat <<EOF | shield --raw create retention policy
 {"name":"Single Day Retention","expires":86400}
-EOF
-RETENTION=$(shield list retention policies --raw | jq -r .[].uuid)
+EOF)
+RETENTION=${RETENTION:9:36}
 
-cat <<EOF | shield --raw create store
+STORE=$(cat <<EOF | shield --raw create store
 {"name":"cfstore","plugin":"s3","endpoint": "{\"access_key_id\":\"ACCESS_KEY\",\"bucket\":\"BUCKET\",\"prefix\":\"bosh-lite-test\",\"s3_host\":\"s3.amazonaws.com\",\"secret_access_key\":\"SECRET_KEY\",\"skip_ssl_validation\":false}"}
-EOF
-STORE=$(shield list stores --raw | jq -r .[].uuid)
+EOF)
+STORE=${STORE:9:36}
 
-cat <<EOF | shield --raw create target
+TARGET=$(cat <<EOF | shield --raw create target
 {"name": "cftarget", "plugin":"postgres", "endpoint":"{\"pg_user\": \"vcap\",\"pg_password\": \"c1oudc0w\",\"pg_host\": \"localhost\",\"pg_port\": \"5524\",\"pg_bindir\": \"/var/vcap/packages/postgres-9.4.2/bin\",\"pg_dump_args\": \"\"}", "agent":"10.244.0.30:5444"}
-EOF
-TARGET=$(shield list targets --raw | jq -r .[].uuid)
-
-echo -e "SCHEDULE: ${SCHEDULE}\nRETENTION: ${RETENTION}\nSTORE: ${STORE}\nTARGET: ${TARGET}"
+EOF)
+TARGET=${TARGET:9:36}
 
 cat <<EOF | shield --raw create job
 {"name":"Shield DB Backups","target":"${TARGET}","store":"${STORE}","schedule":"${SCHEDULE}","retention":"${RETENTION}","paused":false}
