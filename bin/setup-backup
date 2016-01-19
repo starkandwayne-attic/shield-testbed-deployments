@@ -2,38 +2,28 @@
 
 export SHIELD_TARGET=http://10.244.2.11:8080
 
-cat <<EOF | bkp create schedule
-name: Daily Backups
-when: daily 3am
+cat <<EOF | shield --raw create schedule
+{"name": "Daily Backups", "when": "daily 3:00"}
 EOF
-SCHEDULE=$(bkp -r list schedules | jq -r .[].uuid)
+SCHEDULE=$(shield list schedules --raw | jq -r .[].uuid)
 
-cat <<EOF | bkp create retention policy
-name:    Default Retention
-expires: 8640000
+cat <<EOF | shield --raw create retention policy
+{"name":"Single Day Retention","expires":86400}
 EOF
-RETENTION=$(bkp -r list retention policies | jq -r .[].uuid)
+RETENTION=$(shield list retention policies --raw | jq -r .[].uuid)
 
-cat <<EOF | bkp create store
-name:     cfstore
-plugin:   s3
-endpoint: '{"access_key_id":"REDACTED","bucket":"BUCKET","prefix":"bosh-lite-test","s3_host":"s3.amazonaws.com","secret_access_key":"REDACTED","skip_ssl_validation":false}'
+cat <<EOF | shield --raw create store
+{"name":"cfstore","plugin":"s3","endpoint": "{\"access_key_id\":\"ACCESS_KEY\",\"bucket\":\"BUCKET\",\"prefix\":\"bosh-lite-test\",\"s3_host\":\"s3.amazonaws.com\",\"secret_access_key\":\"SECRET_KEY\",\"skip_ssl_validation\":false}"}
 EOF
-STORE=$(bkp -r list stores | jq -r .[].uuid)
+STORE=$(shield list stores --raw | jq -r .[].uuid)
 
-cat <<EOF | bkp create target
-name:     cftarget
-plugin:   postgres
-endpoint: '{"pg_user": "vcap","pg_password": "c1oudc0w","pg_host": "localhost","pg_port": "5524","pg_bindir": "/var/vcap/packages/postgres-9.4.2/bin","pg_dump_args": ""}'
-agent:    10.244.0.30:5444
+cat <<EOF | shield --raw create target
+{"name": "cftarget", "plugin":"postgres", "endpoint":"{\"pg_user\": \"vcap\",\"pg_password\": \"c1oudc0w\",\"pg_host\": \"localhost\",\"pg_port\": \"5524\",\"pg_bindir\": \"/var/vcap/packages/postgres-9.4.2/bin\",\"pg_dump_args\": \"\"}", "agent":"10.244.0.30:5444"}
 EOF
-TARGET=$(bkp -r list targets | jq -r .[].uuid)
+TARGET=$(shield list targets --raw | jq -r .[].uuid)
 
-cat <<EOF | bkp create job
-name:      Shield DB Backups
-target:    ${TARGET}
-store:     ${STORE}
-schedule:  ${SCHEDULE}
-retention: ${RETENTION}
-paused:    false
+echo -e "SCHEDULE: ${SCHEDULE}\nRETENTION: ${RETENTION}\nSTORE: ${STORE}\nTARGET: ${TARGET}"
+
+cat <<EOF | shield --raw create job
+{"name":"Shield DB Backups","target":"${TARGET}","store":"${STORE}","schedule":"${SCHEDULE}","retention":"${RETENTION}","paused":false}
 EOF
