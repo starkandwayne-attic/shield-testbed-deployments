@@ -10,7 +10,7 @@ info() {
 	echo >&1 $*
 }
 
-PWD=$(pwd)
+current_workdir=$(pwd)
 
 info "Setting up your SHIELD dev/test environment"
 info "Note that you must have: "
@@ -34,7 +34,7 @@ if [[ -z $(command -v shield) ]]; then
 	cp bin/bkp /usr/local/bin/
 	info "Shield CLI is now located at:"
 	info $(which shield)
-	cd ${PWD}
+	cd ${current_workdir}
 fi
 
 info "Uploading docker and docker postgres releases"
@@ -48,6 +48,8 @@ cd shield-boshrelease/src/shield
 git submodule update --init --recursive
 cd ../..
 bosh create release && bosh upload release
+
+cd ${current_workdir}
 
 info "Deploying CF, docker postgres, and shield"
 info "(If this is your initial deploy it may take some time.)"
