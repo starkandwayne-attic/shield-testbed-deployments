@@ -32,6 +32,7 @@ jobs:
     persistent_disk: 2048
     templates:
       - { release: shield, name: postgres }
+      - { release: shield, name: nginx }
       - { release: shield, name: shield-daemon }
       - { release: shield, name: shield-agent }
       - { release: shield, name: agent-pgtools }
@@ -59,12 +60,44 @@ properties:
   shield:
     daemon:
       name: S.H.I.E.L.D. Training Camp
+      domain: shield.10.244.2.11.netip.cc
       database:
+        type: postgres
         host: 10.244.2.11
         port: 5524
         db: shielddb
         username: shieldadmin
         password: admin
+      ssh_private_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEpAIBAAKCAQEAyLuFSne2lF2kRVd1i2ETryurN9o3LimZedWcFktrXRi4y/U5
+        yF9meBQ1sihMEfifcu133u+HWX39VoARnTL//m559CIHzAeacSE1mOR/BGagfsvW
+        BxhvgwXj2iagyp537li/r9bG5O8eG6GwjwjJNf0yDwnrQR4MpXwjVksJmEf8FhJk
+        LqQUAW3rvQCyrjgYeXnOTmOf5ZDXilZofvM7XE6aYlMdrEl2SCf1MgEO4yhtj847
+        mw6sxObM2fUpFQkK75UxooBQtxYl378ZJNHhd+zM41L4yEsogBycPmbmkkptHr6x
+        za8+PkQ7KC9Z/hcwe2yuFEY9xqiyOmQd0ohWLwIDAQABAoIBAQCfya4kBkG/vv8J
+        98HpDoDF22QzVLDCPXkfo+vZT3YKqKhKK04w88g05BmOVUegsqHysZfPTisXERS+
+        a7oZwcRH/Bd2QDSmtJK7ZW0t5Q47KZqu9IHOKiRyTxj+yesK/7SGdf048yZmjPYR
+        ltdeNOc+4+uaTxIHRu1YOgZDJf5gSdvYttct6iJ1zWHoxe2uUvuHarFlHnQ6dO5n
+        97higxqP8wEARzQspmTFI+MMMvCwB++YYbdIkXVVcvL0a7wu+QbpiV4Hj7aRAFES
+        jhD41VSCHxaBu1tUYPJ2tgOt2SgvWLy4u1z3n2rFn1v8EgWXm+wa2MIrAxBkEy1Y
+        cKR7PjLZAoGBAO1Ju2ZH6/42S0AUTOC1nfwBFWiMfvRBNybdrJ5RSQdlkQkpeMFL
+        h75ReCpuz/aOoCiKFzKOk5N8Ac5FZU2T4GwsxiLhO5trXiTn85CJydgp7jucT/tC
+        mLZGt9dd/67KNriSszOaLWKt10ehZcoY/dtSPZaeFnbh9G6N6X/Akku9AoGBANiP
+        0lzJZH2Hz3Y29fxWh++Y+DI7xHaZ7USOYrkV8P9th4zClxT3GTmyF3RHYArG4ApU
+        3Y2UP2YszMBSXwdOlvUfqP7DUiIqrz6Dh58L385X4l44N6S9JrJkOH/7LWMg74ZQ
+        j21xhEon6vae7OytAgj20B01g7JYtzimOPIcNrJbAoGAV9SM2wUQIx5xqBxbgGl5
+        Osgj5njqnPpusaInvMoVn/lGP//rxJByhE2fjwVJUNfmDFtgzsPbeCHUgUdKgfaU
+        gTXpeQuphpOtWzfH/d4iqjKLDeGD8VrrL7zpW3xdoZMTwin6zsTou7fhEZB6Ht41
+        SLMePNvzMLneQfWhUjozbHkCgYAHxMkIGRVox2ly1S/n2HbR6ovkyW4XzxfK4My7
+        1QSrNROqwgRHdUHLZw8eVb0lRdMdq8Oy44GOucayk4HjMjeKHZOjaABXR2638GH6
+        G6PwtAhj1uJwH3T26093j9wl9TWCfPtYMr1LJ7lvFW5sYxxyk+ANXDEYQcR43MWo
+        McjohwKBgQDYd5Oi7R7dsVGi2EPc61eLNnGLx3an6vew2yrwirSwbGN7jU5GJ7fe
+        GRcGVf1nZBKpwg7E89SqZ75XsdgVTVJgchuXavtzweDW6hjMSyIiWMquuQitkXcL
+        bMYI63HgWh9yvKt1h7yf4VUYuuetz11BUkqd4RuiXyUI5hpqvmH8jQ==
+        -----END RSA PRIVATE KEY-----
+    agent:
+      daemon_public_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDIu4VKd7aUXaRFV3WLYROvK6s32jcuKZl51ZwWS2tdGLjL9TnIX2Z4FDWyKEwR+J9y7Xfe74dZff1WgBGdMv/+bnn0IgfMB5pxITWY5H8EZqB+y9YHGG+DBePaJqDKnnfuWL+v1sbk7x4bobCPCMk1/TIPCetBHgylfCNWSwmYR/wWEmQupBQBbeu9ALKuOBh5ec5OY5/lkNeKVmh+8ztcTppiUx2sSXZIJ/UyAQ7jKG2PzjubDqzE5szZ9SkVCQrvlTGigFC3FiXfvxkk0eF37MzjUvjISyiAHJw+ZuaSSm0evrHNrz4+RDsoL1n+FzB7bK4URj3GqLI6ZB3SiFYv
     log_level: debug
 
 compilation:
